@@ -1,0 +1,16 @@
+[package]
+name = "lattice-based-signature"
+version = "0.1.0"
+authors = ["AlvinHon <alvin.cpp@gmail.com>"]
+edition = "2021"
+license = "Apache-2.0/MIT"
+readme = "README.md"
+repository = "https://github.com/AlvinHon/lattice-based-signature"
+description = ""
+
+
+[lib]
+name = "lattice_sig"
+path = "src/lib.rs"
+
+[dependencies]
