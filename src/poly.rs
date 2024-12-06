@@ -148,12 +148,12 @@ where
 
     fn add(self, other: Self) -> Self {
         let mut result = vec![T::zero(); std::cmp::max(self.coeffs.len(), other.coeffs.len())];
-        for i in 0..result.len() {
+        for (i, r_i) in result.iter_mut().enumerate() {
             if i < self.coeffs.len() {
-                result[i] = result[i] + self.coeffs[i];
+                *r_i = *r_i + self.coeffs[i];
             }
             if i < other.coeffs.len() {
-                result[i] = result[i] + other.coeffs[i];
+                *r_i = *r_i + other.coeffs[i];
             }
         }
         trim_zeros(&mut result);
