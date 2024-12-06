@@ -23,6 +23,49 @@ impl<T> Polynomial<T> {
     pub fn deg(&self) -> usize {
         self.coeffs.len() - 1
     }
+
+    /// Computes the pseudo remainder `r` of the polynomial `p` by another polynomial `d`.
+    /// i.e. `r = p - q * d` where `q` is the quotient of the division.
+    pub fn pseudo_remainder(&self, other: &Self) -> Self
+    where
+        T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+    {
+        if other.is_zero() {
+            panic!("Division by zero");
+        }
+
+        if self.is_zero() {
+            return Polynomial::zero();
+        }
+
+        if self.deg() < other.deg() {
+            return self.clone();
+        }
+
+        // Polynomial Pseudo-Division (Wu's method, https://en.wikipedia.org/wiki/Wu%27s_method_of_characteristic_set)
+        // Variable names are using the notations from the reference: https://aszanto.math.ncsu.edu/MA722/ln-02.pdf
+        let mut r = self.clone(); // r = f
+        let s = other.deg();
+        let b_s = *other.coeffs.last().unwrap();
+        while !r.is_zero() && r.deg() >= s {
+            // deg_y(r) - s
+            let pow_y = r.deg() - s;
+            let lc_r = *r.coeffs.last().unwrap();
+            // r' = b_s r - lc_r * g * x^pow_y
+            for i in 0..r.deg() {
+                let term = if i < pow_y {
+                    T::zero()
+                } else {
+                    lc_r * other.coeffs[i - pow_y]
+                };
+                r.coeffs[i] = b_s * r.coeffs[i] - term;
+            }
+            r.coeffs.pop();
+            trim_zeros(&mut r.coeffs);
+        }
+
+        r
+    }
 }
 
 fn trim_zeros<T: Zero>(v: &mut Vec<T>) {
@@ -274,5 +317,19 @@ mod test {
         let p = Polynomial::zero();
         let r = Polynomial::zero();
         assert_eq!(p * 2, r);
+    }
+
+    #[test]
+    fn test_divide() {
+        // examples from https://en.wikipedia.org/wiki/Polynomial_long_division
+        let p1 = Polynomial::new(vec![-4, 0, -2, 1]);
+        let p2 = Polynomial::new(vec![-3, 1]);
+        let r = p1.pseudo_remainder(&p2);
+        assert_eq!(r, Polynomial::new(vec![5]));
+
+        let p1 = Polynomial::new(vec![-42, 0, -12, 1]);
+        let p2 = Polynomial::new(vec![1, -2, 1]);
+        let r = p1.pseudo_remainder(&p2);
+        assert_eq!(r, Polynomial::new(vec![-32, -21]));
     }
 }
