@@ -1,6 +1,6 @@
 //! Straightforward implementation of a polynomial type with basic arithmetic operations.
 
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, Index, Mul, Neg, Sub};
 
 use num::Zero;
 
@@ -26,8 +26,9 @@ impl<T> Polynomial<T> {
 
     /// Computes the pseudo remainder `r` of the polynomial `p` by another polynomial `d`.
     /// i.e. `r = p - q * d` where `q` is the quotient of the division.
-    pub fn pseudo_remainder(&self, other: &Self) -> Self
+    pub fn pseudo_remainder<D>(&self, other: &D) -> Self
     where
+        D: PolynomialDivider<T> + Zero,
         T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
     {
         if other.is_zero() {
@@ -46,7 +47,7 @@ impl<T> Polynomial<T> {
         // Variable names are using the notations from the reference: https://aszanto.math.ncsu.edu/MA722/ln-02.pdf
         let mut r = self.clone(); // r = f
         let s = other.deg();
-        let b_s = *other.coeffs.last().unwrap();
+        let b_s = other.leading_coefficient();
         while !r.is_zero() && r.deg() >= s {
             // deg_y(r) - s
             let pow_y = r.deg() - s;
@@ -56,7 +57,7 @@ impl<T> Polynomial<T> {
                 let term = if i < pow_y {
                     T::zero()
                 } else {
-                    lc_r * other.coeffs[i - pow_y]
+                    lc_r * other[i - pow_y]
                 };
                 r.coeffs[i] = b_s * r.coeffs[i] - term;
             }
@@ -201,6 +202,35 @@ where
         trim_zeros(&mut result);
         Polynomial { coeffs: result }
     }
+}
+
+impl<T> Index<usize> for Polynomial<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.coeffs[index]
+    }
+}
+
+impl<T> PolynomialDivider<T> for Polynomial<T>
+where
+    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+{
+    fn deg(&self) -> usize {
+        self.deg()
+    }
+
+    fn leading_coefficient(&self) -> T {
+        self.coeffs.last().copied().unwrap_or(T::zero())
+    }
+}
+
+pub trait PolynomialDivider<T>: Zero + Index<usize, Output = T>
+where
+    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+{
+    fn deg(&self) -> usize;
+    fn leading_coefficient(&self) -> T;
 }
 
 #[cfg(test)]
