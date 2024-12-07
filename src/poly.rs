@@ -1,8 +1,14 @@
 //! Straightforward implementation of a polynomial type with basic arithmetic operations.
 
-use std::ops::{Add, Index, Mul, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use num::Zero;
+
+pub trait PolynomialDivider<T>: Zero {
+    fn deg(&self) -> usize;
+    fn leading_coefficient(&self) -> T;
+    fn coefficient(&self, idx: usize) -> T;
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Polynomial<T> {
@@ -57,7 +63,7 @@ impl<T> Polynomial<T> {
                 let term = if i < pow_y {
                     T::zero()
                 } else {
-                    lc_r * other[i - pow_y]
+                    lc_r * other.coefficient(i - pow_y)
                 };
                 r.coeffs[i] = b_s * r.coeffs[i] - term;
             }
@@ -89,6 +95,23 @@ where
 
     fn is_zero(&self) -> bool {
         self.coeffs.is_empty() || self.coeffs.iter().all(|c| c.is_zero())
+    }
+}
+
+impl<T> PolynomialDivider<T> for Polynomial<T>
+where
+    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+{
+    fn deg(&self) -> usize {
+        self.deg()
+    }
+
+    fn leading_coefficient(&self) -> T {
+        self.coeffs.last().cloned().unwrap_or(T::zero())
+    }
+
+    fn coefficient(&self, idx: usize) -> T {
+        self.coeffs.get(idx).cloned().unwrap_or(T::zero())
     }
 }
 
@@ -204,33 +227,92 @@ where
     }
 }
 
-impl<T> Index<usize> for Polynomial<T> {
-    type Output = T;
+// ... SparsePolynomial<T> ...
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.coeffs[index]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct SparsePolynomial<T> {
+    pub terms: Vec<(usize, T)>,
+}
+
+impl<T> SparsePolynomial<T> {
+    pub fn deg(&self) -> usize {
+        self.terms.iter().map(|(d, _)| *d).max().unwrap_or(0)
+    }
+
+    /// Sets the coefficient of the term with the given degree.
+    pub fn set(&mut self, coeff: T, degree: usize)
+    where
+        T: Zero,
+    {
+        if coeff.is_zero() {
+            self.terms.retain(|(d, _)| *d != degree);
+        } else {
+            let idx = self.terms.iter().position(|(d, _)| *d == degree);
+            match idx {
+                Some(i) => self.terms[i] = (degree, coeff),
+                None => self.terms.push((degree, coeff)),
+            }
+        }
+    }
+
+    fn trim(&mut self)
+    where
+        T: Zero,
+    {
+        self.terms.retain(|(_, c)| !c.is_zero());
     }
 }
 
-impl<T> PolynomialDivider<T> for Polynomial<T>
+impl<T> PolynomialDivider<T> for SparsePolynomial<T>
 where
-    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+    T: Zero + Clone + Copy,
 {
     fn deg(&self) -> usize {
         self.deg()
     }
 
     fn leading_coefficient(&self) -> T {
-        self.coeffs.last().copied().unwrap_or(T::zero())
+        self.coefficient(self.deg())
+    }
+
+    fn coefficient(&self, idx: usize) -> T {
+        self.terms
+            .iter()
+            .find(|(d, _)| *d == idx)
+            .map(|(_, c)| *c)
+            .unwrap_or(T::zero())
     }
 }
 
-pub trait PolynomialDivider<T>: Zero + Index<usize, Output = T>
+impl<T> Zero for SparsePolynomial<T>
 where
-    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+    T: Zero + Clone + Copy,
 {
-    fn deg(&self) -> usize;
-    fn leading_coefficient(&self) -> T;
+    fn zero() -> Self {
+        SparsePolynomial { terms: vec![] }
+    }
+
+    fn is_zero(&self) -> bool {
+        self.terms.is_empty() || self.terms.iter().all(|(_, c)| c.is_zero())
+    }
+}
+
+impl<T> Add for SparsePolynomial<T>
+where
+    T: Zero + Clone + Copy + Add<Output = T>,
+{
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let mut result = self;
+
+        for (i, coeff) in other.terms {
+            let sum = result.coefficient(i) + coeff;
+            result.set(sum, i);
+        }
+        result.trim();
+        result
+    }
 }
 
 #[cfg(test)]
@@ -272,6 +354,25 @@ mod test {
         let p1 = Polynomial::zero();
         let p2 = Polynomial::new(vec![1, 2, 3]);
         let r = Polynomial::new(vec![1, 2, 3]);
+        assert_eq!(p1 + p2, r);
+    }
+
+    #[test]
+    fn test_add_sparse() {
+        let mut p1 = SparsePolynomial::zero();
+        p1.set(3, 2);
+        p1.set(2, 1);
+        p1.set(1, 0);
+
+        let mut p2 = SparsePolynomial::zero();
+        p2.set(5, 1);
+        p2.set(4, 0);
+
+        let mut r = SparsePolynomial::zero();
+        r.set(3, 2);
+        r.set(7, 1);
+        r.set(5, 0);
+
         assert_eq!(p1 + p2, r);
     }
 
@@ -352,14 +453,32 @@ mod test {
     #[test]
     fn test_divide() {
         // examples from https://en.wikipedia.org/wiki/Polynomial_long_division
+
+        // Polynomial 1
         let p1 = Polynomial::new(vec![-4, 0, -2, 1]);
         let p2 = Polynomial::new(vec![-3, 1]);
         let r = p1.pseudo_remainder(&p2);
         assert_eq!(r, Polynomial::new(vec![5]));
 
+        // SparsePolynomial 1
+        let mut sp2 = SparsePolynomial::zero();
+        sp2.set(-3, 0);
+        sp2.set(1, 1);
+        let r = p1.pseudo_remainder(&sp2);
+        assert_eq!(r, Polynomial::new(vec![5]));
+
+        // Polynomial 2
         let p1 = Polynomial::new(vec![-42, 0, -12, 1]);
         let p2 = Polynomial::new(vec![1, -2, 1]);
         let r = p1.pseudo_remainder(&p2);
+        assert_eq!(r, Polynomial::new(vec![-32, -21]));
+
+        // SparsePolynomial 2
+        let mut sp2 = SparsePolynomial::zero();
+        sp2.set(1, 0);
+        sp2.set(-2, 1);
+        sp2.set(1, 2);
+        let r = p1.pseudo_remainder(&sp2);
         assert_eq!(r, Polynomial::new(vec![-32, -21]));
     }
 }
