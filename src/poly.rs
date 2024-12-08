@@ -35,7 +35,8 @@ impl<T> Polynomial<T> {
     pub fn pseudo_remainder<D>(&self, other: &D) -> Self
     where
         D: PolynomialDivider<T> + Zero,
-        T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+        T: Zero + Clone,
+        for<'a> &'a T: Mul<Output = T> + Sub<Output = T> + Add<Output = T>,
     {
         if other.is_zero() {
             panic!("Division by zero");
@@ -57,15 +58,15 @@ impl<T> Polynomial<T> {
         while !r.is_zero() && r.deg() >= s {
             // deg_y(r) - s
             let pow_y = r.deg() - s;
-            let lc_r = *r.coeffs.last().unwrap();
+            let lc_r = r.coeffs.last().cloned().unwrap();
             // r' = b_s r - lc_r * g * x^pow_y
             for i in 0..r.deg() {
-                let term = if i < pow_y {
+                let term: T = if i < pow_y {
                     T::zero()
                 } else {
-                    lc_r * other.coefficient(i - pow_y)
+                    &lc_r * &other.coefficient(i - pow_y)
                 };
-                r.coeffs[i] = b_s * r.coeffs[i] - term;
+                r.coeffs[i] = &(&b_s * &r.coeffs[i]) - &term;
             }
             r.coeffs.pop();
             trim_zeros(&mut r.coeffs);
@@ -87,7 +88,8 @@ fn trim_zeros<T: Zero>(v: &mut Vec<T>) {
 
 impl<T> Zero for Polynomial<T>
 where
-    T: Zero + Clone + Copy,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     fn zero() -> Self {
         Polynomial { coeffs: vec![] }
@@ -100,7 +102,8 @@ where
 
 impl<T> PolynomialDivider<T> for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Sub<Output = T> + Mul<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     fn deg(&self) -> usize {
         self.deg()
@@ -119,7 +122,8 @@ where
 
 impl<T> Add<T> for Polynomial<T>
 where
-    T: Zero + Clone + Copy,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     type Output = Self;
 
@@ -129,14 +133,15 @@ where
         }
 
         let mut result = self;
-        result.coeffs[0] = result.coeffs[0] + other;
+        result.coeffs[0] = &result.coeffs[0] + &other;
         result
     }
 }
 
 impl<T> Sub<T> for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Neg<Output = T>,
+    T: Zero + Clone + Neg<Output = T>,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     type Output = Self;
 
@@ -147,7 +152,8 @@ where
 
 impl<T> Mul<T> for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Mul<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     type Output = Self;
 
@@ -157,7 +163,7 @@ where
         }
 
         Polynomial {
-            coeffs: self.coeffs.iter().map(|&c| c * other).collect(),
+            coeffs: self.coeffs.iter().map(|c| c * &other).collect(),
         }
     }
 }
@@ -166,7 +172,8 @@ where
 
 impl<T> Add for Polynomial<T>
 where
-    T: Zero + Clone + Copy,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T>,
 {
     type Output = Self;
 
@@ -174,10 +181,10 @@ where
         let mut result = vec![T::zero(); std::cmp::max(self.coeffs.len(), other.coeffs.len())];
         for (i, r_i) in result.iter_mut().enumerate() {
             if i < self.coeffs.len() {
-                *r_i = *r_i + self.coeffs[i];
+                *r_i = &*r_i + &self.coeffs[i];
             }
             if i < other.coeffs.len() {
-                *r_i = *r_i + other.coeffs[i];
+                *r_i = &*r_i + &other.coeffs[i];
             }
         }
         trim_zeros(&mut result);
@@ -187,20 +194,22 @@ where
 
 impl<T> Neg for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Neg<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Neg<Output = T>,
 {
     type Output = Self;
 
     fn neg(self) -> Self {
         Polynomial {
-            coeffs: self.coeffs.iter().map(|&c| -c).collect(),
+            coeffs: self.coeffs.iter().map(|c| -c).collect(),
         }
     }
 }
 
 impl<T> Sub for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Neg<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Neg<Output = T> + Add<Output = T>,
 {
     type Output = Self;
 
@@ -211,7 +220,8 @@ where
 
 impl<T> Mul for Polynomial<T>
 where
-    T: Zero + Clone + Copy + Mul<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Mul<Output = T> + Add<Output = T>,
 {
     type Output = Self;
 
@@ -219,7 +229,7 @@ where
         let mut result = vec![T::zero(); self.coeffs.len() + other.coeffs.len() - 1];
         for i in 0..self.coeffs.len() {
             for j in 0..other.coeffs.len() {
-                result[i + j] = result[i + j] + self.coeffs[i] * other.coeffs[j];
+                result[i + j] = &result[i + j] + &(&self.coeffs[i] * &other.coeffs[j]);
             }
         }
         trim_zeros(&mut result);
@@ -265,7 +275,8 @@ impl<T> SparsePolynomial<T> {
 
 impl<T> PolynomialDivider<T> for SparsePolynomial<T>
 where
-    T: Zero + Clone + Copy,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     fn deg(&self) -> usize {
         self.deg()
@@ -279,14 +290,15 @@ where
         self.terms
             .iter()
             .find(|(d, _)| *d == idx)
-            .map(|(_, c)| *c)
+            .map(|(_, c)| c.clone())
             .unwrap_or(T::zero())
     }
 }
 
 impl<T> Zero for SparsePolynomial<T>
 where
-    T: Zero + Clone + Copy,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     fn zero() -> Self {
         SparsePolynomial { terms: vec![] }
@@ -299,7 +311,8 @@ where
 
 impl<T> Add for SparsePolynomial<T>
 where
-    T: Zero + Clone + Copy + Add<Output = T>,
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T>,
 {
     type Output = Self;
 
@@ -307,7 +320,7 @@ where
         let mut result = self;
 
         for (i, coeff) in other.terms {
-            let sum = result.coefficient(i) + coeff;
+            let sum = &result.coefficient(i) + &coeff;
             result.set(sum, i);
         }
         result.trim();
