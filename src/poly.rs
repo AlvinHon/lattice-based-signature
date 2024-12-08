@@ -12,7 +12,7 @@ pub trait PolynomialDivider<T>: Zero {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Polynomial<T> {
-    pub coeffs: Vec<T>,
+    pub(crate) coeffs: Vec<T>,
 }
 
 impl<T> Polynomial<T> {
@@ -73,6 +73,15 @@ impl<T> Polynomial<T> {
         }
 
         r
+    }
+
+    pub fn mapv<U, F>(&self, mut f: F) -> Polynomial<U>
+    where
+        F: FnMut(&T) -> U,
+    {
+        Polynomial {
+            coeffs: self.coeffs.iter().map(|c| f(c)).collect(),
+        }
     }
 }
 
