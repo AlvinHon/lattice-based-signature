@@ -75,12 +75,12 @@ impl<T> Polynomial<T> {
         r
     }
 
-    pub fn mapv<U, F>(&self, mut f: F) -> Polynomial<U>
+    pub fn mapv<U, F>(&self, f: F) -> Polynomial<U>
     where
-        F: FnMut(&T) -> U,
+        F: Fn(&T) -> U,
     {
         Polynomial {
-            coeffs: self.coeffs.iter().map(|c| f(c)).collect(),
+            coeffs: self.coeffs.iter().map(f).collect(),
         }
     }
 }

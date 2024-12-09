@@ -5,9 +5,9 @@ use crate::poly::{Polynomial, SparsePolynomial};
 
 pub struct Ring {
     // prime number congruent to 1 mod 2n
-    pub p: BigUint,
+    p: BigUint,
     // an integer that is a power of 2
-    pub n: u32,
+    n: u32,
 }
 
 impl Ring {
