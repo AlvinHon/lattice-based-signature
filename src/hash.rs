@@ -1,4 +1,4 @@
-use num::One;
+use num::{One, Zero};
 use std::ops::Neg;
 
 use crate::poly::Polynomial;
@@ -7,7 +7,7 @@ use crate::poly::Polynomial;
 /// that have all zero coefficients except for at most 32 coefficients that are +-1.
 pub fn hash<T>(mut p: Polynomial<T>, n: usize, r: &[u8]) -> Polynomial<T>
 where
-    T: One + Neg<Output = T>,
+    T: Zero + One + Neg<Output = T>,
 {
     assert_eq!(r.len(), 20);
     assert!(n >= 512);
@@ -32,7 +32,7 @@ where
     // if the polynomial is of degree greater than 512, then
     // all of its higher-order terms will be 0.
     if p.coeffs.len() > n {
-        p.coeffs.truncate(n);
+        p.truncate(n);
     }
 
     p

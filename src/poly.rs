@@ -83,6 +83,14 @@ impl<T> Polynomial<T> {
             coeffs: self.coeffs.iter().map(f).collect(),
         }
     }
+
+    pub fn truncate(&mut self, n: usize)
+    where
+        T: Zero,
+    {
+        self.coeffs.truncate(n);
+        trim_zeros(&mut self.coeffs);
+    }
 }
 
 fn trim_zeros<T: Zero>(v: &mut Vec<T>) {
