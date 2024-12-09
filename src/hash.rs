@@ -29,6 +29,12 @@ where
         }
     }
 
+    // if the polynomial is of degree greater than 512, then
+    // all of its higher-order terms will be 0.
+    if p.coeffs.len() > n {
+        p.coeffs.truncate(n);
+    }
+
     p
 }
 
