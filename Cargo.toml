@@ -14,6 +14,13 @@ name = "lattice_sig"
 path = "src/lib.rs"
 
 [dependencies]
+digest = "0.10.7"
 num = "0.4"
-num-prime = "0.4.4"
-rand = "0.8"
+rand = "0.8.5"
+
+[dependencies.num-bigint]
+version = "0.4.6"
+features = ["rand"]
+
+[dev-dependencies]
+ripemd = "0.1.3"

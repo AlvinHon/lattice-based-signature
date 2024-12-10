@@ -1,4 +1,4 @@
-use num::{bigint::RandBigInt, BigInt, BigUint, One};
+use num::{bigint::RandBigInt, BigInt, BigUint, One, Zero};
 use rand::Rng;
 
 use crate::poly::{Polynomial, SparsePolynomial};
@@ -30,17 +30,26 @@ impl Ring {
         rng: &mut R,
         bound: &BigInt,
     ) -> Polynomial<BigInt> {
-        let mut coeffs = Vec::new();
         let one = BigInt::one();
-        for _ in 0..self.n {
+        let mut coeffs = (0..self.n)
             // +1 to include the upper bound
-            let c = rng.gen_bigint_range(&(-bound), &(bound + &one));
-            coeffs.push(c);
+            .map(|_| rng.gen_bigint_range(&(-bound), &(bound + &one)))
+            .collect::<Vec<_>>();
+
+        // if leading coefficient is 0, then generate a new polynomial
+        while coeffs[self.n as usize - 1] == BigInt::zero() {
+            coeffs[self.n as usize - 1] = rng.gen_bigint_range(&(-bound), &(bound + &one));
         }
 
-        // TODO if leading coefficient is 0, then generate a new polynomial
-
         Polynomial::new(coeffs)
+    }
+
+    #[inline]
+    pub fn convert_polynomial_to_bytes(&self, p: Polynomial<BigInt>) -> Vec<u8> {
+        p.coeffs
+            .iter()
+            .flat_map(|x| x.to_signed_bytes_le())
+            .collect()
     }
 
     pub fn mul(&self, p1: Polynomial<BigInt>, p2: Polynomial<BigInt>) -> Polynomial<BigInt> {
@@ -64,18 +73,7 @@ impl Ring {
         };
         // Zp[x] / (x^n + 1)
         p.pseudo_remainder(&divider)
-        // coefficients reduced modulo p
-        // let bound = self.bound();
-        // let coeffs = p
-        //     .coeffs
-        //     .into_iter()
-        //     .map(|c| {
-        //         let sign = c.sign();
-        //         c % &bound
-        //     })
-        //     .collect();
-
-        // Polynomial::new(coeffs)
+        // TODO check if need coefficients reduced modulo p
     }
 
     pub fn is_valid(&self, p: &Polynomial<BigInt>) -> bool {
@@ -96,8 +94,7 @@ impl Ring {
 #[cfg(test)]
 mod test {
     use crate::{poly::Polynomial, ring::Ring};
-    use num::{BigInt, BigUint, One};
-    use num_prime::{nt_funcs::is_prime, Primality, PrimalityTestConfig};
+    use num::{BigInt, One};
 
     #[test]
     fn test_zp() {
@@ -124,10 +121,6 @@ mod test {
         let rng = &mut rand::thread_rng();
         let p = 8383489u64;
         let n = 512u32;
-        assert!(
-            is_prime(&BigUint::from(p), Some(PrimalityTestConfig::default())) == Primality::Yes
-        );
-        assert!(p % (2 * n as u64) == 1);
 
         let r = Ring::new(p, n);
 
