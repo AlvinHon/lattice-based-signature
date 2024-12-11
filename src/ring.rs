@@ -56,8 +56,8 @@ impl Ring {
         negacyclic_convolution(self.n, p1, p2)
     }
 
-    pub fn add(&self, p1: Polynomial<BigInt>, p2: Polynomial<BigInt>) -> Polynomial<BigInt> {
-        self.reduce_modulo(p1 + p2)
+    pub fn add(&self, p1: &Polynomial<BigInt>, p2: &Polynomial<BigInt>) -> Polynomial<BigInt> {
+        self.reduce_modulo(p1.add(p2))
     }
 
     pub fn sub(&self, p1: Polynomial<BigInt>, p2: Polynomial<BigInt>) -> Polynomial<BigInt> {
@@ -126,7 +126,7 @@ mod test {
         let y2 = r.rand_polynomial(rng);
 
         // y1 + y2
-        let y1_plus_y2 = r.add(y1.clone(), y2.clone());
+        let y1_plus_y2 = r.add(&y1, &y2);
         // y1 - y2
         let y1_minus_y2 = r.sub(y1.clone(), y2.clone());
         // a * y1
@@ -136,7 +136,7 @@ mod test {
 
         // a * (y1 + y2) == a * y1 + a * y2
         let lhs = r.mul(&a, &y1_plus_y2);
-        let rhs = r.add(ay1.clone(), ay2.clone());
+        let rhs = r.add(&ay1, &ay2);
         assert!(lhs == rhs);
 
         // a * (y1 - y2) == a * y1 - a * y2

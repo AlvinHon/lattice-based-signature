@@ -26,7 +26,7 @@ impl<R: Rng> RandKeyGen for R {
         let a = params.r.rand_polynomial(self);
         let t = {
             let t_as1 = params.r.mul(&a, &sk.s1);
-            params.r.add(t_as1, sk.s2.clone())
+            params.r.add(&t_as1, &sk.s2)
         };
 
         VerificationKey { a, t }

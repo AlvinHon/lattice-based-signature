@@ -30,6 +30,41 @@ impl<T> Polynomial<T> {
         self.coeffs.len() - 1
     }
 
+    /// Add polynomial `other` to `self`.
+    pub fn add(&self, other: &Polynomial<T>) -> Self
+    where
+        T: Zero + Clone,
+        for<'a> &'a T: Add<Output = T>,
+    {
+        let mut result = vec![T::zero(); std::cmp::max(self.coeffs.len(), other.coeffs.len())];
+        for (i, r_i) in result.iter_mut().enumerate() {
+            if i < self.coeffs.len() {
+                *r_i = &*r_i + &self.coeffs[i];
+            }
+            if i < other.coeffs.len() {
+                *r_i = &*r_i + &other.coeffs[i];
+            }
+        }
+        trim_zeros(&mut result);
+        Polynomial { coeffs: result }
+    }
+
+    /// Multiply polynomial `self` by `other`.
+    fn mul(&self, other: &Polynomial<T>) -> Self
+    where
+        T: Zero + Clone,
+        for<'a> &'a T: Mul<Output = T> + Add<Output = T>,
+    {
+        let mut result = vec![T::zero(); self.coeffs.len() + other.coeffs.len() - 1];
+        for i in 0..self.coeffs.len() {
+            for j in 0..other.coeffs.len() {
+                result[i + j] = &result[i + j] + &(&self.coeffs[i] * &other.coeffs[j]);
+            }
+        }
+        trim_zeros(&mut result);
+        Polynomial { coeffs: result }
+    }
+
     /// Computes the pseudo remainder `r` of the polynomial `p` by another polynomial `d`.
     /// i.e. `r = p - q * d` where `q` is the quotient of the division.
     pub fn pseudo_remainder<D>(&self, other: &D) -> Self
@@ -234,17 +269,7 @@ where
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        let mut result = vec![T::zero(); std::cmp::max(self.coeffs.len(), other.coeffs.len())];
-        for (i, r_i) in result.iter_mut().enumerate() {
-            if i < self.coeffs.len() {
-                *r_i = &*r_i + &self.coeffs[i];
-            }
-            if i < other.coeffs.len() {
-                *r_i = &*r_i + &other.coeffs[i];
-            }
-        }
-        trim_zeros(&mut result);
-        Polynomial { coeffs: result }
+        (&self).add(&other)
     }
 }
 
@@ -256,9 +281,9 @@ where
     type Output = Self;
 
     fn neg(self) -> Self {
-        Polynomial {
-            coeffs: self.coeffs.iter().map(|c| -c).collect(),
-        }
+        let mut result = self;
+        result.coeffs.iter_mut().for_each(|c| *c = -&*c);
+        result
     }
 }
 
@@ -270,7 +295,7 @@ where
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
-        self + (-other)
+        (&self).add(&(-other))
     }
 }
 
@@ -282,14 +307,7 @@ where
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        let mut result = vec![T::zero(); self.coeffs.len() + other.coeffs.len() - 1];
-        for i in 0..self.coeffs.len() {
-            for j in 0..other.coeffs.len() {
-                result[i + j] = &result[i + j] + &(&self.coeffs[i] * &other.coeffs[j]);
-            }
-        }
-        trim_zeros(&mut result);
-        Polynomial { coeffs: result }
+        (&self).mul(&other)
     }
 }
 
