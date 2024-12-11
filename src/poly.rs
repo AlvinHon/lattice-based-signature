@@ -93,6 +93,45 @@ impl<T> Polynomial<T> {
     }
 }
 
+/// Negacyclic convolution of two polynomials. i.e. Compute the polynomial `c` module `x^n + 1`, which is
+/// in Zp[X]/(x^n + 1).
+pub(crate) fn negacyclic_convolution<T>(
+    n: u32,
+    a: &Polynomial<T>,
+    b: &Polynomial<T>,
+) -> Polynomial<T>
+where
+    T: Zero + Clone,
+    for<'a> &'a T: Add<Output = T> + Mul<Output = T> + Sub<Output = T>,
+{
+    let (a, b) = if a.deg() < b.deg() { (a, b) } else { (b, a) };
+
+    let mut c = Polynomial::new(vec![T::zero(); n as usize]);
+    for i in 0..n as usize {
+        let a_coeff = a.coefficient(i);
+        if a_coeff.is_zero() {
+            continue;
+        }
+        for j in 0..n as usize {
+            let b_coeff = b.coefficient(j);
+            if b_coeff.is_zero() {
+                continue;
+            }
+
+            let c_i_j = &c.coeffs[(i + j) % (n as usize)];
+            let pow = (i + j) / (n as usize);
+
+            if pow % 2 == 0 {
+                c.coeffs[(i + j) % (n as usize)] = c_i_j + &(&a_coeff * &b_coeff);
+            } else {
+                c.coeffs[(i + j) % (n as usize)] = c_i_j - &(&a_coeff * &b_coeff);
+            }
+        }
+    }
+    trim_zeros(&mut c.coeffs);
+    c
+}
+
 fn trim_zeros<T: Zero>(v: &mut Vec<T>) {
     while let Some(&t) = v.last().as_ref() {
         if t.is_zero() {
