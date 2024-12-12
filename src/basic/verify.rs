@@ -29,7 +29,7 @@ impl VerificationKey {
         let c_prime = {
             let tc = r.mul(&self.t, c);
             let az1 = r.mul(&self.a, z1);
-            let az1_z2 = r.add(&az1, &z2);
+            let az1_z2 = r.add(&az1, z2);
             let az1_z2_tc = r.sub(az1_z2, tc);
             let az1_z2_tc_bytes = params.r.convert_polynomial_to_bytes(az1_z2_tc);
             hash::<_, H>(params.r.n as usize, &[&az1_z2_tc_bytes, message].concat())

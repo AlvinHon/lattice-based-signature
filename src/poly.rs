@@ -268,6 +268,7 @@ where
 {
     type Output = Self;
 
+    #[allow(clippy::needless_borrow)]
     fn add(self, other: Self) -> Self {
         (&self).add(&other)
     }
@@ -294,6 +295,7 @@ where
 {
     type Output = Self;
 
+    #[allow(clippy::needless_borrow)]
     fn sub(self, other: Self) -> Self {
         (&self).add(&(-other))
     }
@@ -306,6 +308,7 @@ where
 {
     type Output = Self;
 
+    #[allow(clippy::needless_borrow)]
     fn mul(self, other: Self) -> Self {
         (&self).mul(&other)
     }

@@ -6,15 +6,14 @@ use crate::poly::{negacyclic_convolution, Polynomial, SparsePolynomial};
 #[derive(Clone, Debug)]
 pub struct Ring {
     // prime number congruent to 1 mod 2n
-    pub(crate) p: BigUint,
+    pub(crate) p: u32,
     // an integer that is a power of 2
     pub(crate) n: u32,
 }
 
 impl Ring {
-    pub fn new<B: Into<BigUint>>(p: B, n: u32) -> Self {
-        let p = p.into();
-        assert!(&p % &(n * BigUint::from(2u64)) == 1u64.into());
+    pub fn new(p: u32, n: u32) -> Self {
+        assert!(p % (n * 2u32) == 1u32);
         Ring { p, n }
     }
 
@@ -84,7 +83,7 @@ impl Ring {
 
     /// Coefficients are within [-(p-1)/2, (p-1)/2]
     fn bound(&self) -> BigInt {
-        BigInt::from((&self.p - &BigUint::one()) / BigUint::from(2u64))
+        BigInt::from((self.p - &BigUint::one()) / BigUint::from(2u64))
     }
 }
 
@@ -96,7 +95,7 @@ mod test {
     #[test]
     fn test_zp() {
         let rng = &mut rand::thread_rng();
-        let p = 8383489u64;
+        let p = 8383489u32;
         let n = 512u32;
 
         let r = Ring::new(p, n);
@@ -116,7 +115,7 @@ mod test {
     #[test]
     fn test_arithmetics() {
         let rng = &mut rand::thread_rng();
-        let p = 8383489u64;
+        let p = 8383489u32;
         let n = 512u32;
 
         let r = Ring::new(p, n);
