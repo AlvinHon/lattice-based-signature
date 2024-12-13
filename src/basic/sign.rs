@@ -1,26 +1,25 @@
-use crate::{hash::hash, params::Params, poly::Polynomial};
+use crate::{field::Elem, hash::hash, params::Params, poly::Polynomial};
 use digest::Digest;
-use num::BigInt;
 use rand::Rng;
 
 use super::{signature::Signature, verify::VerificationKey};
 
 #[derive(Clone, Debug)]
-pub struct SigningKey {
-    pub(crate) s1: Polynomial<BigInt>,
-    pub(crate) s2: Polynomial<BigInt>,
+pub struct SigningKey<const P: u32> {
+    pub(crate) s1: Polynomial<Elem<P>>,
+    pub(crate) s2: Polynomial<Elem<P>>,
 }
 
-impl SigningKey {
+impl<const P: u32> SigningKey<P> {
     pub fn sign<R: Rng, H: Digest>(
         &self,
         rng: &mut R,
-        params: &Params,
-        vk: &VerificationKey,
+        params: &Params<P>,
+        vk: &VerificationKey<P>,
         message: &[u8],
-    ) -> Signature {
-        let bound_k = BigInt::from(params.k);
-        let bound_k_32 = BigInt::from(params.k - 32);
+    ) -> Signature<P> {
+        let bound_k = Elem::<P>::from(params.k).to_signed();
+        let bound_k_32 = Elem::<P>::from(params.k - 32).to_signed();
         loop {
             let y1 = params.r.rand_polynomial_within(rng, &bound_k);
             let y2 = params.r.rand_polynomial_within(rng, &bound_k);

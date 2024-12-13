@@ -1,22 +1,22 @@
 use digest::Digest;
 use num::BigInt;
 
-use crate::{hash::hash, params::Params, poly::Polynomial};
+use crate::{field::Elem, hash::hash, params::Params, poly::Polynomial};
 
 use super::signature::Signature;
 
 #[derive(Clone, Debug)]
-pub struct VerificationKey {
-    pub(crate) a: Polynomial<BigInt>,
-    pub(crate) t: Polynomial<BigInt>,
+pub struct VerificationKey<const P: u32> {
+    pub(crate) a: Polynomial<Elem<P>>,
+    pub(crate) t: Polynomial<Elem<P>>,
 }
 
-impl VerificationKey {
+impl<const P: u32> VerificationKey<P> {
     pub fn verify<H: Digest>(
         &self,
-        params: &Params,
+        params: &Params<P>,
         message: &[u8],
-        signature: &Signature,
+        signature: &Signature<P>,
     ) -> bool {
         let Params { r, k } = params;
         let Signature { z1, z2, c } = signature;
