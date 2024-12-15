@@ -6,11 +6,11 @@ edition = "2021"
 license = "Apache-2.0/MIT"
 readme = "README.md"
 repository = "https://github.com/AlvinHon/lattice-based-signature"
-description = ""
+description = "A straightforward rust implementation of Lattice-based signature scheme"
 
 
 [lib]
-name = "lattice_sig"
+name = "lattice_based_signature"
 path = "src/lib.rs"
 
 [dependencies]
