@@ -1,3 +1,5 @@
+//! Implements the hash function H defined in the paper.
+
 use digest::Digest;
 use num::{One, Zero};
 use std::ops::Neg;

@@ -1,11 +1,12 @@
+//! Define a finite field and its operations.
+
 use std::ops::{Add, Mul, Neg, Sub};
 
 use num::{bigint::RandBigInt, BigInt, BigUint, One, Zero};
 use num_bigint::ToBigInt;
 use rand::Rng;
 
-use crate::poly::Polynomial;
-
+/// A finite field element. It encapsulates a positive integer modulo a prime number P.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Elem<const P: u32> {
     pub(crate) value: BigUint,
@@ -164,31 +165,11 @@ impl<const P: u32> Mul for &Elem<P> {
     }
 }
 
-pub fn polynomial_ring_1<R: Rng, const P: u32, const N: u32>(
-    rng: &mut R,
-    bound: &Elem<P>,
-) -> Polynomial<Elem<P>> {
-    let zero = Elem::<P>::zero();
-    let one = Elem::<P>::one();
-    let mut coeffs = (0..N)
-        // +1 to include the upper bound
-        .map(|_| rng.gen_biguint_range(&zero.value, &(&bound.value + &one.value)))
-        .map(|value| Elem { value })
-        .collect::<Vec<_>>();
-
-    // if leading coefficient is 0, then generate a new polynomial
-    while coeffs[N as usize - 1] == Elem::zero() {
-        coeffs[N as usize - 1].value =
-            rng.gen_biguint_range(&zero.value, &(&bound.value + &one.value));
-    }
-
-    Polynomial::new(coeffs)
-}
-
 #[cfg(test)]
 mod test {
     use crate::{
-        field::{polynomial_ring_1, Elem},
+        field::Elem,
+        params::set_1,
         poly::{negacyclic_convolution, Polynomial, SparsePolynomial},
     };
     use num::One;
@@ -196,20 +177,16 @@ mod test {
 
     use super::*;
 
-    const P1: u32 = 8383489u32;
-    const N1: u32 = 512u32;
-    // const K1: u32 = 16384u32; // 2^14
-
     #[test]
     fn test_zp() {
         let rng = &mut rand::thread_rng();
-        let bound = Elem::<P1> {
-            value: BigUint::from(P1 - 1),
-        };
-        let a = polynomial_ring_1::<_, P1, N1>(rng, &bound);
+        let params = set_1();
+        let n = params.r.n;
+
+        let a = params.r.rand_polynomial(rng);
         let p = Polynomial::new(vec![Elem::zero(), Elem::one()]);
         let divider = SparsePolynomial {
-            terms: vec![(N1 as usize, Elem::one()), (0, Elem::one())],
+            terms: vec![(n as usize, Elem::one()), (0, Elem::one())],
         };
         let start_time = std::time::Instant::now();
         let rhs = (a.clone() * p.clone()).pseudo_remainder(&divider);
@@ -217,24 +194,26 @@ mod test {
 
         // (x^n + 1)-cyclic lattice is an ideal in Z[x]/(x^n + 1)
         // (v_{0} + ... v_{n-2} x^{n-2} + v_{n-1} x^{n-1}) x = -v_{n-1} + v_{0} x + ... + v_{n-2} x^{n-1}")
-        assert!(a.coeffs[N1 as usize - 1] == -&rhs.coeffs[0]);
-        for i in 0..N1 as usize - 1 {
+        assert!(a.coeffs[n as usize - 1] == -&rhs.coeffs[0]);
+        for i in 0..n as usize - 1 {
             assert!(a.coeffs[i] == rhs.coeffs[i + 1]);
         }
 
         let start_time = std::time::Instant::now();
-        let lhs = negacyclic_convolution(N1, &a, &p);
+        let lhs = negacyclic_convolution(n, &a, &p);
         println!("Time elapsed: {:?}", start_time.elapsed());
         assert!(lhs == rhs);
 
         let start_time = std::time::Instant::now();
-        let lhs = negacyclic_convolution(N1, &p, &a);
+        let lhs = negacyclic_convolution(n, &p, &a);
         println!("Time elapsed: {:?}", start_time.elapsed());
         assert!(lhs == rhs);
     }
 
     #[test]
     fn test_signed() {
+        const P1: u32 = 8383489;
+
         // bound
         let bound = Elem::<P1> {
             value: BigUint::from(P1 - 1),

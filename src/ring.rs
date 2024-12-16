@@ -1,3 +1,6 @@
+//! Defines a ring structure for quotient ring Zp[x]/(x^n + 1) and its
+//! polynomial operations.
+
 use num::{BigInt, One, Zero};
 use rand::Rng;
 
@@ -6,6 +9,8 @@ use crate::{
     poly::{negacyclic_convolution, Polynomial, SparsePolynomial},
 };
 
+/// A ring structure for quotient ring Zp[x]/(x^n + 1) where p is a prime number,
+/// and n is a power of 2 s.t. p = 1 mod 2n.
 #[derive(Clone, Debug)]
 pub struct Ring<const P: u32> {
     // an integer that is a power of 2
@@ -13,6 +18,8 @@ pub struct Ring<const P: u32> {
 }
 
 impl<const P: u32> Ring<P> {
+    /// Create a new ring structure for Zp[x]/(x^n + 1).
+    /// Panics if p % (n * 2) != 1
     pub fn new(n: u32) -> Self {
         assert!(P % (n * 2u32) == 1u32);
         Ring { n }
@@ -33,17 +40,12 @@ impl<const P: u32> Ring<P> {
         let lower = -bound;
         let upper = bound + 1; // +1 to include the upper bound
 
-        self.rand_polynomial_with(rng, |rng| Elem::gen_range(rng, &lower, &upper))
-    }
-
-    fn rand_polynomial_with<R: Rng, F>(&self, rng: &mut R, f: F) -> Polynomial<Elem<P>>
-    where
-        F: Fn(&mut R) -> Elem<P>,
-    {
-        let mut coeffs = (0..self.n).map(|_| f(rng)).collect::<Vec<_>>();
+        let mut coeffs = (0..self.n)
+            .map(|_| Elem::gen_range(rng, &lower, &upper))
+            .collect::<Vec<_>>();
         // if leading coefficient is 0, then generate a new polynomial
         while coeffs[self.n as usize - 1] == Elem::zero() {
-            coeffs[self.n as usize - 1] = f(rng);
+            coeffs[self.n as usize - 1] = Elem::gen_range(rng, &lower, &upper);
         }
 
         Polynomial::new(coeffs)
@@ -54,14 +56,17 @@ impl<const P: u32> Ring<P> {
         p.coeffs.iter().flat_map(|x| x.to_bytes_le()).collect()
     }
 
+    #[inline]
     pub fn mul(&self, p1: &Polynomial<Elem<P>>, p2: &Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
         negacyclic_convolution(self.n, p1, p2)
     }
 
+    #[inline]
     pub fn add(&self, p1: &Polynomial<Elem<P>>, p2: &Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
         self.reduce_modulo(p1.add(p2))
     }
 
+    #[inline]
     pub fn sub(&self, p1: Polynomial<Elem<P>>, p2: Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
         self.reduce_modulo(p1 - p2)
     }
@@ -75,11 +80,13 @@ impl<const P: u32> Ring<P> {
         // TODO check if need coefficients reduced modulo p
     }
 
+    /// Check if the polynomial has coefficients within [-(p-1)/2, (p-1)/2].
     pub fn is_valid(&self, p: &Polynomial<Elem<P>>) -> bool {
         let bound = Elem::<P>::from(Self::bound());
         self.is_valid_within(p, &bound.to_signed())
     }
 
+    /// Check if the polynomial has coefficients within [-bound, bound].
     pub fn is_valid_within(&self, p: &Polynomial<Elem<P>>, bound: &BigInt) -> bool {
         p.coeffs
             .iter()

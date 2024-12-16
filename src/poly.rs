@@ -10,6 +10,7 @@ pub trait PolynomialDivider<T>: Zero {
     fn coefficient(&self, idx: usize) -> T;
 }
 
+/// Polynomial implemented by a vector of coefficients of type `T`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Polynomial<T> {
     pub(crate) coeffs: Vec<T>,
@@ -110,6 +111,7 @@ impl<T> Polynomial<T> {
         r
     }
 
+    /// Maps the polynomial coefficients to another type.
     pub fn mapv<U, F>(&self, f: F) -> Polynomial<U>
     where
         F: Fn(&T) -> U,
@@ -119,6 +121,7 @@ impl<T> Polynomial<T> {
         }
     }
 
+    /// Truncate the polynomial to the given degree, and then trim the leading zero coefficients.
     pub fn truncate(&mut self, n: usize)
     where
         T: Zero,
@@ -128,8 +131,8 @@ impl<T> Polynomial<T> {
     }
 }
 
-/// Negacyclic convolution of two polynomials. i.e. Compute the polynomial `c` module `x^n + 1`, which is
-/// in Zp[X]/(x^n + 1).
+/// Negacyclic convolution of two polynomials. i.e. Compute the polynomial
+/// `c` = `a` * `b` mod `x^n + 1`, which is in Zp[X]/(x^n + 1).
 pub(crate) fn negacyclic_convolution<T>(
     n: u32,
     a: &Polynomial<T>,
@@ -167,6 +170,7 @@ where
     c
 }
 
+/// Trims the leading zero coefficients of the polynomial.
 fn trim_zeros<T: Zero>(v: &mut Vec<T>) {
     while let Some(&t) = v.last().as_ref() {
         if t.is_zero() {
@@ -316,6 +320,8 @@ where
 
 // ... SparsePolynomial<T> ...
 
+/// Sparse polynomial implemented by a vector of terms (degree, coefficient).
+/// It is particularly used for a polynomial `x^n + 1` in this library, for performance reasons.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct SparsePolynomial<T> {
     pub terms: Vec<(usize, T)>,
