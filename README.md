@@ -29,3 +29,8 @@ let message = (0..20).map(|_| rng.gen()).collect::<Vec<u8>>();
 let sig = sk.sign::<_, Ripemd160>(rng, &params, &vk, &message);
 assert!(vk.verify::<Ripemd160>(&params, &message, &sig));
 ```
+
+## Disclaimer
+
+- This is an experimental library that solely implements the idea from the paper in rust. There are still remaining parts to complete in future. It should not be used in production.
+- The library has not any association with the actual implementation (as mentioned in the paper) by the paper authors.
