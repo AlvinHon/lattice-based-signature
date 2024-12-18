@@ -1,3 +1,5 @@
+//! Defines the `SigningKey` struct and its methods.
+
 use crate::{field::Elem, hash::hash, params::Params, poly::Polynomial};
 use digest::Digest;
 use rand::Rng;
@@ -11,6 +13,11 @@ pub struct SigningKey<const P: u32> {
 }
 
 impl<const P: u32> SigningKey<P> {
+    /// Sign a message using the key pair.
+    ///
+    /// This method requires digest `H` from [Digest] because signature scheme
+    /// does not specify how the message is hashed into some bytes. Hence, it
+    /// is up to the caller to provide a hash algorithm.
     pub fn sign<R: Rng, H: Digest>(
         &self,
         rng: &mut R,

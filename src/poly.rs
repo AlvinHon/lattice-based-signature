@@ -4,6 +4,8 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 use num::Zero;
 
+/// The trait defines methods required for polynomial division for
+/// a type as a divider.
 pub trait PolynomialDivider<T>: Zero {
     fn deg(&self) -> usize;
     fn leading_coefficient(&self) -> T;

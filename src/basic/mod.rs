@@ -1,3 +1,9 @@
+//! Implementation of the basic signature scheme as described in section 3.1 of the paper.
+//!
+//! The scheme is considered basic because there is also another optimized version of the scheme
+//! that aims to reduce the representation size of the coefficients of the polynomials so that
+//! the data involved in operations is reduced.
+
 pub mod sign;
 pub mod signature;
 pub mod verify;
@@ -8,6 +14,7 @@ use rand::Rng;
 use sign::SigningKey;
 use verify::VerificationKey;
 
+/// The trait defines the methods to generate random signing and verifying keys.
 pub trait RandKeyGen {
     fn gen_signing_key<const P: u32>(&mut self, params: &Params<P>) -> SigningKey<P>;
     fn gen_verifying_key<const P: u32>(
@@ -18,6 +25,7 @@ pub trait RandKeyGen {
 }
 
 impl<R: Rng> RandKeyGen for R {
+    /// Generate a random signing key with prime modulus P.
     fn gen_signing_key<const P: u32>(&mut self, params: &Params<P>) -> SigningKey<P> {
         let one = Elem::<P>::one();
         let s1 = params.r.rand_polynomial_within(self, &one.clone().into());
@@ -26,6 +34,7 @@ impl<R: Rng> RandKeyGen for R {
         SigningKey { s1, s2 }
     }
 
+    /// Generate a random verifying key from a given signing key with prime modulus P.
     fn gen_verifying_key<const P: u32>(
         &mut self,
         params: &Params<P>,
