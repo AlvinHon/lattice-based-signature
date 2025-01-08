@@ -1,4 +1,4 @@
-# Practical Lattice-Based Cryptography
+# Lattice-Based Signature
 
 A straightforward rust implementation of Lattice-based signature scheme defined in [Practical Lattice-Based Cryptography: A Signature Scheme for Embedded Systems](https://www.iacr.org/archive/ches2012/74280529/74280529.pdf).
 
