@@ -122,15 +122,6 @@ impl<T> Polynomial<T> {
             coeffs: self.coeffs.iter().map(f).collect(),
         }
     }
-
-    /// Truncate the polynomial to the given degree, and then trim the leading zero coefficients.
-    pub fn truncate(&mut self, n: usize)
-    where
-        T: Zero,
-    {
-        self.coeffs.truncate(n);
-        trim_zeros(&mut self.coeffs);
-    }
 }
 
 /// Negacyclic convolution of two polynomials. i.e. Compute the polynomial
