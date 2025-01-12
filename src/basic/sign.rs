@@ -7,12 +7,12 @@ use rand::Rng;
 use super::{signature::Signature, verify::VerificationKey};
 
 #[derive(Clone, Debug)]
-pub struct SigningKey<const P: u32> {
+pub struct SigningKey<const P: u32, const N: usize> {
     pub(crate) s1: Polynomial<Elem<P>>,
     pub(crate) s2: Polynomial<Elem<P>>,
 }
 
-impl<const P: u32> SigningKey<P> {
+impl<const P: u32, const N: usize> SigningKey<P, N> {
     /// Sign a message using the key pair.
     ///
     /// This method requires digest `H` from [Digest] because signature scheme
@@ -21,8 +21,8 @@ impl<const P: u32> SigningKey<P> {
     pub fn sign<R: Rng, H: Digest>(
         &self,
         rng: &mut R,
-        params: &Params<P>,
-        vk: &VerificationKey<P>,
+        params: &Params<P, N>,
+        vk: &VerificationKey<P, N>,
         message: &[u8],
     ) -> Signature<P> {
         let bound_k = Elem::<P>::from(params.k).to_signed();
@@ -34,7 +34,7 @@ impl<const P: u32> SigningKey<P> {
                 let ay1 = params.r.mul(&vk.a, &y1);
                 let ay1_y2 = params.r.add(&ay1, &y2);
                 let ay1_y2_bytes = params.r.convert_polynomial_to_bytes(ay1_y2);
-                hash::<_, H>(params.r.n as usize, &[&ay1_y2_bytes, message].concat())
+                hash::<_, H>(params.n(), &[&ay1_y2_bytes, message].concat())
             };
             let s1c = params.r.mul(&self.s1, &c);
             let s2c = params.r.mul(&self.s2, &c);

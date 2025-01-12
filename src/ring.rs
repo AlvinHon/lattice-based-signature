@@ -12,19 +12,11 @@ use crate::{
 /// A ring structure for quotient ring Zp[x]/(x^n + 1) where p is a prime number,
 /// and n is a power of 2 s.t. p = 1 mod 2n.
 #[derive(Clone, Debug)]
-pub struct Ring<const P: u32> {
-    // an integer that is a power of 2
-    pub(crate) n: u32,
+pub struct Ring<const P: u32, const N: usize> {
+    phantom: std::marker::PhantomData<()>, // to make the struct non-generic
 }
 
-impl<const P: u32> Ring<P> {
-    /// Create a new ring structure for Zp[x]/(x^n + 1).
-    /// Panics if p % (n * 2) != 1
-    pub fn new(n: u32) -> Self {
-        assert!(P % (n * 2u32) == 1u32);
-        Ring { n }
-    }
-
+impl<const P: u32, const N: usize> Ring<P, N> {
     /// Generate a random polynomial with degree = n - 1, and coefficients are in field Zp.
     pub fn rand_polynomial<R: Rng>(&self, rng: &mut R) -> Polynomial<Elem<P>> {
         let bound = Self::bound();
@@ -40,12 +32,12 @@ impl<const P: u32> Ring<P> {
         let lower = -bound;
         let upper = bound + 1; // +1 to include the upper bound
 
-        let mut coeffs = (0..self.n)
+        let mut coeffs = (0..N)
             .map(|_| Elem::gen_range(rng, &lower, &upper))
             .collect::<Vec<_>>();
         // if leading coefficient is 0, then generate a new polynomial
-        while coeffs[self.n as usize - 1] == Elem::zero() {
-            coeffs[self.n as usize - 1] = Elem::gen_range(rng, &lower, &upper);
+        while coeffs[N - 1] == Elem::zero() {
+            coeffs[N - 1] = Elem::gen_range(rng, &lower, &upper);
         }
 
         Polynomial::new(coeffs)
@@ -58,7 +50,7 @@ impl<const P: u32> Ring<P> {
 
     #[inline]
     pub fn mul(&self, p1: &Polynomial<Elem<P>>, p2: &Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
-        negacyclic_convolution(self.n, p1, p2)
+        negacyclic_convolution(N as u32, p1, p2)
     }
 
     #[inline]
@@ -73,7 +65,7 @@ impl<const P: u32> Ring<P> {
 
     fn reduce_modulo(&self, p: Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
         let divider = SparsePolynomial {
-            terms: vec![(self.n as usize, Elem::<P>::one()), (0, Elem::<P>::one())],
+            terms: vec![(N, Elem::<P>::one()), (0, Elem::<P>::one())],
         };
         // Zp[x] / (x^n + 1)
         p.pseudo_remainder(&divider)
@@ -101,6 +93,17 @@ impl<const P: u32> Ring<P> {
     }
 }
 
+impl<const P: u32, const N: usize> Default for Ring<P, N> {
+    /// Create a new ring structure for Zp[x]/(x^n + 1).
+    /// Panics if p % (n * 2) != 1
+    fn default() -> Self {
+        assert!(P % (N * 2) as u32 == 1u32);
+        Self {
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{field::Elem, params::set_1, poly::Polynomial};
@@ -111,8 +114,8 @@ mod test {
         let rng = &mut rand::thread_rng();
 
         let params = set_1();
+        let n = params.n() as u32;
         let r = params.r;
-        let n = r.n;
 
         let a = r.rand_polynomial(rng);
         let p = Polynomial::new(vec![Elem::zero(), Elem::one()]);

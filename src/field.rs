@@ -181,7 +181,7 @@ mod test {
     fn test_zp() {
         let rng = &mut rand::thread_rng();
         let params = set_1();
-        let n = params.r.n;
+        let n = params.n() as u32;
 
         let a = params.r.rand_polynomial(rng);
         let p = Polynomial::new(vec![Elem::zero(), Elem::one()]);

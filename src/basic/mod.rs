@@ -16,17 +16,23 @@ use verify::VerificationKey;
 
 /// The trait defines the methods to generate random signing and verifying keys.
 pub trait RandKeyGen {
-    fn gen_signing_key<const P: u32>(&mut self, params: &Params<P>) -> SigningKey<P>;
-    fn gen_verifying_key<const P: u32>(
+    fn gen_signing_key<const P: u32, const N: usize>(
         &mut self,
-        params: &Params<P>,
-        sk: &SigningKey<P>,
-    ) -> VerificationKey<P>;
+        params: &Params<P, N>,
+    ) -> SigningKey<P, N>;
+    fn gen_verifying_key<const P: u32, const N: usize>(
+        &mut self,
+        params: &Params<P, N>,
+        sk: &SigningKey<P, N>,
+    ) -> VerificationKey<P, N>;
 }
 
 impl<R: Rng> RandKeyGen for R {
     /// Generate a random signing key with prime modulus P.
-    fn gen_signing_key<const P: u32>(&mut self, params: &Params<P>) -> SigningKey<P> {
+    fn gen_signing_key<const P: u32, const N: usize>(
+        &mut self,
+        params: &Params<P, N>,
+    ) -> SigningKey<P, N> {
         let one = Elem::<P>::one();
         let s1 = params.r.rand_polynomial_within(self, &one.clone().into());
         let s2 = params.r.rand_polynomial_within(self, &one.clone().into());
@@ -35,11 +41,11 @@ impl<R: Rng> RandKeyGen for R {
     }
 
     /// Generate a random verifying key from a given signing key with prime modulus P.
-    fn gen_verifying_key<const P: u32>(
+    fn gen_verifying_key<const P: u32, const N: usize>(
         &mut self,
-        params: &Params<P>,
-        sk: &SigningKey<P>,
-    ) -> VerificationKey<P> {
+        params: &Params<P, N>,
+        sk: &SigningKey<P, N>,
+    ) -> VerificationKey<P, N> {
         let a = params.r.rand_polynomial(self);
         let t = {
             let t_as1 = params.r.mul(&a, &sk.s1);
