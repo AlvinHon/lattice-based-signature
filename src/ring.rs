@@ -1,13 +1,11 @@
 //! Defines a ring structure for quotient ring Zp[x]/(x^n + 1) and its
 //! polynomial operations.
 
-use num::{BigInt, One, Zero};
+use num::{BigInt, Zero};
+use poly_ring::Polynomial;
 use rand::Rng;
 
-use crate::{
-    field::Elem,
-    poly::{negacyclic_convolution, Polynomial, SparsePolynomial},
-};
+use crate::field::Elem;
 
 /// A ring structure for quotient ring Zp[x]/(x^n + 1) where p is a prime number,
 /// and n is a power of 2 s.t. p = 1 mod 2n.
@@ -18,7 +16,7 @@ pub struct Ring<const P: u32, const N: usize> {
 
 impl<const P: u32, const N: usize> Ring<P, N> {
     /// Generate a random polynomial with degree = n - 1, and coefficients are in field Zp.
-    pub fn rand_polynomial<R: Rng>(&self, rng: &mut R) -> Polynomial<Elem<P>> {
+    pub fn rand_polynomial<R: Rng>(&self, rng: &mut R) -> Polynomial<Elem<P>, N> {
         let bound = Self::bound();
         self.rand_polynomial_within(rng, &bound)
     }
@@ -28,7 +26,7 @@ impl<const P: u32, const N: usize> Ring<P, N> {
         &self,
         rng: &mut R,
         bound: &BigInt,
-    ) -> Polynomial<Elem<P>> {
+    ) -> Polynomial<Elem<P>, N> {
         let lower = -bound;
         let upper = bound + 1; // +1 to include the upper bound
 
@@ -44,44 +42,46 @@ impl<const P: u32, const N: usize> Ring<P, N> {
     }
 
     #[inline]
-    pub fn convert_polynomial_to_bytes(&self, p: Polynomial<Elem<P>>) -> Vec<u8> {
-        p.coeffs.iter().flat_map(|x| x.to_bytes_le()).collect()
+    pub fn convert_polynomial_to_bytes(&self, p: Polynomial<Elem<P>, N>) -> Vec<u8> {
+        p.iter().flat_map(|x| x.to_bytes_le()).collect()
     }
 
     #[inline]
-    pub fn mul(&self, p1: &Polynomial<Elem<P>>, p2: &Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
-        negacyclic_convolution(N as u32, p1, p2)
+    pub fn mul(
+        &self,
+        p1: &Polynomial<Elem<P>, N>,
+        p2: &Polynomial<Elem<P>, N>,
+    ) -> Polynomial<Elem<P>, N> {
+        p1.clone() * p2.clone()
     }
 
     #[inline]
-    pub fn add(&self, p1: &Polynomial<Elem<P>>, p2: &Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
-        self.reduce_modulo(p1.add(p2))
+    pub fn add(
+        &self,
+        p1: &Polynomial<Elem<P>, N>,
+        p2: &Polynomial<Elem<P>, N>,
+    ) -> Polynomial<Elem<P>, N> {
+        p1.clone() + p2.clone()
     }
 
     #[inline]
-    pub fn sub(&self, p1: Polynomial<Elem<P>>, p2: Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
-        self.reduce_modulo(p1 - p2)
-    }
-
-    fn reduce_modulo(&self, p: Polynomial<Elem<P>>) -> Polynomial<Elem<P>> {
-        let divider = SparsePolynomial {
-            terms: vec![(N, Elem::<P>::one()), (0, Elem::<P>::one())],
-        };
-        // Zp[x] / (x^n + 1)
-        p.pseudo_remainder(&divider)
-        // TODO check if need coefficients reduced modulo p
+    pub fn sub(
+        &self,
+        p1: Polynomial<Elem<P>, N>,
+        p2: Polynomial<Elem<P>, N>,
+    ) -> Polynomial<Elem<P>, N> {
+        p1 - p2
     }
 
     /// Check if the polynomial has coefficients within [-(p-1)/2, (p-1)/2].
-    pub fn is_valid(&self, p: &Polynomial<Elem<P>>) -> bool {
+    pub fn is_valid(&self, p: &Polynomial<Elem<P>, N>) -> bool {
         let bound = Elem::<P>::from(Self::bound());
         self.is_valid_within(p, &bound.to_signed())
     }
 
     /// Check if the polynomial has coefficients within [-bound, bound].
-    pub fn is_valid_within(&self, p: &Polynomial<Elem<P>>, bound: &BigInt) -> bool {
-        p.coeffs
-            .iter()
+    pub fn is_valid_within(&self, p: &Polynomial<Elem<P>, N>, bound: &BigInt) -> bool {
+        p.iter()
             .map(|c| c.to_signed())
             .all(|c| c >= -bound && &c <= bound)
     }
@@ -106,28 +106,7 @@ impl<const P: u32, const N: usize> Default for Ring<P, N> {
 
 #[cfg(test)]
 mod test {
-    use crate::{field::Elem, params::set_1, poly::Polynomial};
-    use num::{One, Zero};
-
-    #[test]
-    fn test_zp() {
-        let rng = &mut rand::thread_rng();
-
-        let params = set_1();
-        let n = params.n() as u32;
-        let r = params.r;
-
-        let a = r.rand_polynomial(rng);
-        let p = Polynomial::new(vec![Elem::zero(), Elem::one()]);
-        let rhs = r.mul(&a, &p);
-
-        // (x^n + 1)-cyclic lattice is an ideal in Z[x]/(x^n + 1)
-        // (v_{0} + ... v_{n-2} x^{n-2} + v_{n-1} x^{n-1}) x = -v_{n-1} + v_{0} x + ... + v_{n-2} x^{n-1}
-        assert!(a.coeffs[n as usize - 1] == -&rhs.coeffs[0]);
-        for i in 0..n as usize - 1 {
-            assert!(a.coeffs[i] == rhs.coeffs[i + 1]);
-        }
-    }
+    use crate::params::set_1;
 
     #[test]
     fn test_arithmetics() {

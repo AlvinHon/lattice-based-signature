@@ -16,6 +16,7 @@ path = "src/lib.rs"
 [dependencies]
 digest = "0.10.7"
 num = "0.4"
+poly-ring = { git = "https://github.com/AlvinHon/poly-ring"}
 rand = "0.8.5"
 
 [dependencies.num-bigint]

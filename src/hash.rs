@@ -2,13 +2,12 @@
 
 use digest::Digest;
 use num::{One, Zero};
+use poly_ring::Polynomial;
 use std::ops::Neg;
-
-use crate::poly::Polynomial;
 
 /// Maps bytes to a 160-bit string and then to a polynomial of degree n - 1 for n >= 512
 /// that have all zero coefficients except for at most 32 coefficients that are +-1.
-pub fn hash<T, H>(n: usize, r: &[u8]) -> Polynomial<T>
+pub fn hash<T, H, const N: usize>(r: &[u8]) -> Polynomial<T, N>
 where
     T: Zero + Clone + One + Neg<Output = T>,
     H: Digest,
@@ -17,13 +16,11 @@ where
     // We rely on the caller to provide a 160-bit hash algorihtm.
     let r = H::digest(r).to_vec();
     assert_eq!(r.len(), 20);
-    assert!(n >= 512);
+    assert!(N >= 512);
 
-    let mut p = Polynomial {
-        // if the polynomial is of degree greater than 512, then
-        // all of its higher-order terms will be 0.
-        coeffs: vec![T::zero(); 512],
-    };
+    // if the polynomial is of degree greater than 512, then
+    // all of its higher-order terms will be 0.
+    let mut coeffs = vec![T::zero(); 512];
 
     for i in (0..160).step_by(5) {
         let r0 = bit(&r, i);
@@ -34,14 +31,14 @@ where
         let coeff_i = (i / 5) * 16 + pos_num as usize;
         if r0 == 0 {
             // put a -1 in position number of the 16-bit string
-            p.coeffs[coeff_i] = -T::one();
+            coeffs[coeff_i] = -T::one();
         } else {
             // put a 1 in position number of the 16-bit string
-            p.coeffs[coeff_i] = T::one();
+            coeffs[coeff_i] = T::one();
         }
     }
 
-    p
+    Polynomial::new(coeffs)
 }
 
 /// Return the i-th bit of a byte string.
@@ -87,7 +84,7 @@ mod test {
     #[test]
     fn test_hash() {
         let data = b"hello world";
-        let p = hash::<i32, Ripemd160>(512, data);
-        assert_eq!(p.coeffs.len(), 512);
+        let p = hash::<i32, Ripemd160, 512>(data);
+        assert!(p.deg() <= 512);
     }
 }

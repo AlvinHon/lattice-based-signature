@@ -3,7 +3,8 @@
 use digest::Digest;
 use num::BigInt;
 
-use crate::{field::Elem, hash::hash, params::Params, poly::Polynomial};
+use crate::{field::Elem, hash::hash, params::Params};
+use poly_ring::Polynomial;
 
 use super::signature::Signature;
 
@@ -11,8 +12,8 @@ use super::signature::Signature;
 /// a setup with prime modulus P.
 #[derive(Clone, Debug)]
 pub struct VerificationKey<const P: u32, const N: usize> {
-    pub(crate) a: Polynomial<Elem<P>>,
-    pub(crate) t: Polynomial<Elem<P>>,
+    pub(crate) a: Polynomial<Elem<P>, N>,
+    pub(crate) t: Polynomial<Elem<P>, N>,
 }
 
 impl<const P: u32, const N: usize> VerificationKey<P, N> {
@@ -25,7 +26,7 @@ impl<const P: u32, const N: usize> VerificationKey<P, N> {
         &self,
         params: &Params<P, N>,
         message: &[u8],
-        signature: &Signature<P>,
+        signature: &Signature<P, N>,
     ) -> bool {
         let Params { r, k } = params;
         let Signature { z1, z2, c } = signature;
@@ -41,7 +42,7 @@ impl<const P: u32, const N: usize> VerificationKey<P, N> {
             let az1_z2 = r.add(&az1, z2);
             let az1_z2_tc = r.sub(az1_z2, tc);
             let az1_z2_tc_bytes = params.r.convert_polynomial_to_bytes(az1_z2_tc);
-            hash::<_, H>(params.n(), &[&az1_z2_tc_bytes, message].concat())
+            hash::<_, H, N>(&[&az1_z2_tc_bytes, message].concat())
         };
 
         c == &c_prime

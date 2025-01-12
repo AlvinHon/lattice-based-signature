@@ -167,48 +167,11 @@ impl<const P: u32> Mul for &Elem<P> {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        field::Elem,
-        params::set_1,
-        poly::{negacyclic_convolution, Polynomial, SparsePolynomial},
-    };
+    use crate::field::Elem;
     use num::One;
     use num_bigint::Sign;
 
     use super::*;
-
-    #[test]
-    fn test_zp() {
-        let rng = &mut rand::thread_rng();
-        let params = set_1();
-        let n = params.n() as u32;
-
-        let a = params.r.rand_polynomial(rng);
-        let p = Polynomial::new(vec![Elem::zero(), Elem::one()]);
-        let divider = SparsePolynomial {
-            terms: vec![(n as usize, Elem::one()), (0, Elem::one())],
-        };
-        let start_time = std::time::Instant::now();
-        let rhs = (a.clone() * p.clone()).pseudo_remainder(&divider);
-        println!("Time elapsed: {:?}", start_time.elapsed());
-
-        // (x^n + 1)-cyclic lattice is an ideal in Z[x]/(x^n + 1)
-        // (v_{0} + ... v_{n-2} x^{n-2} + v_{n-1} x^{n-1}) x = -v_{n-1} + v_{0} x + ... + v_{n-2} x^{n-1}")
-        assert!(a.coeffs[n as usize - 1] == -&rhs.coeffs[0]);
-        for i in 0..n as usize - 1 {
-            assert!(a.coeffs[i] == rhs.coeffs[i + 1]);
-        }
-
-        let start_time = std::time::Instant::now();
-        let lhs = negacyclic_convolution(n, &a, &p);
-        println!("Time elapsed: {:?}", start_time.elapsed());
-        assert!(lhs == rhs);
-
-        let start_time = std::time::Instant::now();
-        let lhs = negacyclic_convolution(n, &p, &a);
-        println!("Time elapsed: {:?}", start_time.elapsed());
-        assert!(lhs == rhs);
-    }
 
     #[test]
     fn test_signed() {

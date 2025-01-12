@@ -1,15 +1,16 @@
 //! Defines the `SigningKey` struct and its methods.
 
-use crate::{field::Elem, hash::hash, params::Params, poly::Polynomial};
+use crate::{field::Elem, hash::hash, params::Params};
 use digest::Digest;
+use poly_ring::Polynomial;
 use rand::Rng;
 
 use super::{signature::Signature, verify::VerificationKey};
 
 #[derive(Clone, Debug)]
 pub struct SigningKey<const P: u32, const N: usize> {
-    pub(crate) s1: Polynomial<Elem<P>>,
-    pub(crate) s2: Polynomial<Elem<P>>,
+    pub(crate) s1: Polynomial<Elem<P>, N>,
+    pub(crate) s2: Polynomial<Elem<P>, N>,
 }
 
 impl<const P: u32, const N: usize> SigningKey<P, N> {
@@ -24,7 +25,7 @@ impl<const P: u32, const N: usize> SigningKey<P, N> {
         params: &Params<P, N>,
         vk: &VerificationKey<P, N>,
         message: &[u8],
-    ) -> Signature<P> {
+    ) -> Signature<P, N> {
         let bound_k = Elem::<P>::from(params.k).to_signed();
         let bound_k_32 = Elem::<P>::from(params.k - 32).to_signed();
         loop {
@@ -34,7 +35,7 @@ impl<const P: u32, const N: usize> SigningKey<P, N> {
                 let ay1 = params.r.mul(&vk.a, &y1);
                 let ay1_y2 = params.r.add(&ay1, &y2);
                 let ay1_y2_bytes = params.r.convert_polynomial_to_bytes(ay1_y2);
-                hash::<_, H>(params.n(), &[&ay1_y2_bytes, message].concat())
+                hash::<_, H, N>(&[&ay1_y2_bytes, message].concat())
             };
             let s1c = params.r.mul(&self.s1, &c);
             let s2c = params.r.mul(&self.s2, &c);
