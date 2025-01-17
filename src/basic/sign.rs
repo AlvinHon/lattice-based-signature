@@ -2,7 +2,7 @@
 
 use crate::{field::Elem, hash::hash, params::Params};
 use digest::Digest;
-use poly_ring::Polynomial;
+use poly_ring_xnp1::Polynomial;
 use rand::Rng;
 
 use super::{signature::Signature, verify::VerificationKey};

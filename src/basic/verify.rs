@@ -4,7 +4,7 @@ use digest::Digest;
 use num::BigInt;
 
 use crate::{field::Elem, hash::hash, params::Params};
-use poly_ring::Polynomial;
+use poly_ring_xnp1::Polynomial;
 
 use super::signature::Signature;
 

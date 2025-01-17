@@ -2,7 +2,7 @@
 
 use digest::Digest;
 use num::{One, Zero};
-use poly_ring::Polynomial;
+use poly_ring_xnp1::Polynomial;
 use std::ops::Neg;
 
 /// Maps bytes to a 160-bit string and then to a polynomial of degree n - 1 for n >= 512

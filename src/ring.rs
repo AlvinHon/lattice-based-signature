@@ -2,7 +2,7 @@
 //! polynomial operations.
 
 use num::{BigInt, Zero};
-use poly_ring::Polynomial;
+use poly_ring_xnp1::Polynomial;
 use rand::Rng;
 
 use crate::field::Elem;
