@@ -56,7 +56,7 @@ fn byte_at_bit(bs: &[u8], i: usize) -> u8 {
     let r4 = bit(bs, i + 3);
 
     // r1 r2 r3 r4 (where we read the 4-digit string as a number between 0 and 15)
-    (r4 | r3 << 1 | r2 << 2 | r1 << 3) % 16
+    (r4 | (r3 << 1) | (r2 << 2) | (r1 << 3)) % 16
 }
 
 #[cfg(test)]
